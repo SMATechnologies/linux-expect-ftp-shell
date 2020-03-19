@@ -1,0 +1,37 @@
+#! /bin/bash
+USER=$1
+PASSWORD=$2
+HOST=$3
+SOURCE=$4
+DEST=$5
+FILES=$6
+
+echo "Cleaning up old files"
+cd "$DEST"
+rm -f $FILES
+echo "Attempting download $FILES from $HOST as $USER"
+
+/usr/bin/expect<<EOD
+spawn /usr/bin/sftp $USER@$HOST
+sleep 2
+expect {
+  timeout { echo "Failed to get password prompt\n"; exit 3 }
+  "*assword:"
+}
+send "$PASSWORD\r"
+expect {
+  timeout { echo "Password did not work"; exit 4 }
+  "sftp>"
+}
+send "cd '$SOURCE'\r"
+expect "sftp>"
+send "ls -l \r"
+expect "sftp>"
+send "mget $FILES '$DEST'\r"
+sleep 5
+expect "sftp>"
+send "bye\r"
+EOD
+
+sleep 2
+test -e $FILES && echo "$FILES were downloaded!" || exit 9
